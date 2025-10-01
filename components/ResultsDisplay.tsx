@@ -1,9 +1,11 @@
 
 import React from 'react';
-import type { GeneratedData } from '../types';
+import type { GeneratedData, KineticPoint } from '../types';
 import { LoaderIcon } from './icons/LoaderIcon';
 import KineticsChart from './KineticsChart';
 import { BeakerIcon } from './icons/BeakerIcon';
+import DataTable from './DataTable';
+import { FileTextIcon } from './icons/FileTextIcon';
 
 interface ResultsDisplayProps {
   data: GeneratedData | null;
@@ -11,7 +13,61 @@ interface ResultsDisplayProps {
   error: string | null;
 }
 
+const ExportButton: React.FC<{ onClick: () => void; children: React.ReactNode; ariaLabel: string }> = ({ onClick, children, ariaLabel }) => (
+    <button
+        onClick={onClick}
+        aria-label={ariaLabel}
+        className="flex items-center gap-1.5 bg-slate-700 hover:bg-slate-600 text-slate-300 font-semibold py-1 px-3 rounded-md text-xs transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-slate-800 focus:ring-cyan-500"
+    >
+        {children}
+    </button>
+);
+
 const ResultsDisplay: React.FC<ResultsDisplayProps> = ({ data, isLoading, error }) => {
+
+  const handleExportCSV = () => {
+    if (!data?.kineticData || data.kineticData.length === 0) return;
+    
+    const kineticData = data.kineticData;
+    const monomerKeys = Object.keys(kineticData[0].conversion ?? {}).filter(k => k !== 'overall');
+    
+    const headers = [
+      "Time (min)",
+      ...monomerKeys.map(name => `${name} Conv. (%)`),
+      "Overall Conv. (%)",
+      "Mn (g/mol)",
+      "Mw (g/mol)",
+      "Dispersity (Đ)"
+    ];
+    const csvRows = [headers.join(',')];
+
+    for (const point of kineticData) {
+        const mn = point.molecularWeightMn;
+        const mw = point.molecularWeightMw;
+        const dispersity = mn != null && mn > 0 && mw != null ? (mw / mn) : 1;
+        const values = [
+            point.time?.toFixed(0) ?? '',
+            ...monomerKeys.map(key => point.conversion?.[key]?.toFixed(2) ?? ''),
+            point.conversion?.overall?.toFixed(2) ?? '',
+            mn?.toLocaleString('en-US', {useGrouping: false}) ?? '',
+            mw?.toLocaleString('en-US', {useGrouping: false}) ?? '',
+            dispersity.toFixed(2)
+        ];
+        csvRows.push(values.join(','));
+    }
+    
+    const csvString = csvRows.join('\n');
+    const blob = new Blob([csvString], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'polymer-kinetics-data.csv';
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  };
+
   const renderContent = () => {
     if (isLoading) {
       return (
@@ -36,17 +92,55 @@ const ResultsDisplay: React.FC<ResultsDisplayProps> = ({ data, isLoading, error 
     }
 
     if (data) {
+      const showRatios = data.inputs.monomers.length === 2 && data.inputs.reactivityRatios;
+      const showCTA = data.inputs.chainTransferAgent && data.inputs.ctaConcentration;
+      const showSolvent = data.inputs.solvent && data.inputs.solventVolume;
+
       return (
-        <div className="space-y-6">
+        <div className="space-y-8">
           <div>
             <h3 className="text-2xl font-bold text-white mb-2">Kinetic Summary</h3>
+            <div className="space-y-2 mb-4">
+              {showRatios && (
+                  <div className="text-xs text-slate-400 p-3 bg-slate-800/50 rounded-md border border-slate-700 flex items-center gap-4 flex-wrap">
+                      <strong>Input Ratios:</strong>
+                      <span>r1 ({data.inputs.monomers[0].name}): <strong>{data.inputs.reactivityRatios?.r1}</strong></span>
+                      <span>r2 ({data.inputs.monomers[1].name}): <strong>{data.inputs.reactivityRatios?.r2}</strong></span>
+                  </div>
+              )}
+              {showCTA && (
+                  <div className="text-xs text-slate-400 p-3 bg-slate-800/50 rounded-md border border-slate-700 flex items-center gap-4 flex-wrap">
+                      <strong>Input CTA:</strong>
+                      <span>Agent: <strong>{data.inputs.chainTransferAgent}</strong></span>
+                      <span>Concentration: <strong>{data.inputs.ctaConcentration} mol/L</strong></span>
+                  </div>
+              )}
+               {showSolvent && (
+                  <div className="text-xs text-slate-400 p-3 bg-slate-800/50 rounded-md border border-slate-700 flex items-center gap-4 flex-wrap">
+                      <strong>Solvent System:</strong>
+                      <span>Solvent: <strong>{data.inputs.solvent}</strong></span>
+                      <span>Volume: <strong>{data.inputs.solventVolume} mL</strong></span>
+                  </div>
+              )}
+            </div>
             <p className="text-slate-300 leading-relaxed bg-slate-800/50 p-4 rounded-md border border-slate-700">{data.summary}</p>
           </div>
           <div>
-            <h3 className="text-2xl font-bold text-white mb-3">Monomer Conversion vs. Time</h3>
+            <div className="flex justify-between items-center mb-3">
+                <h3 className="text-2xl font-bold text-white">Kinetics Profile</h3>
+            </div>
             <div className="bg-slate-800/50 p-4 rounded-md border border-slate-700 h-96">
                 <KineticsChart data={data.kineticData} />
             </div>
+          </div>
+           <div>
+            <div className="flex justify-between items-center mb-3">
+                <h3 className="text-2xl font-bold text-white">Simulation Data Table</h3>
+                <ExportButton onClick={handleExportCSV} ariaLabel="Export table as CSV">
+                    <FileTextIcon className="w-4 h-4" /> CSV
+                </ExportButton>
+            </div>
+            <DataTable data={data.kineticData} />
           </div>
           {data.sources && data.sources.length > 0 && (
              <div>
@@ -79,7 +173,9 @@ const ResultsDisplay: React.FC<ResultsDisplayProps> = ({ data, isLoading, error 
 
   return (
     <div className="bg-slate-800 p-6 rounded-lg shadow-lg min-h-[600px] border border-slate-700 flex justify-center items-center">
-      {renderContent()}
+       <div className="w-full h-full">
+         {renderContent()}
+       </div>
     </div>
   );
 };
