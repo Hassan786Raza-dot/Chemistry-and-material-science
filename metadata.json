@@ -1,0 +1,5 @@
+{
+  "name": "Polymer Reaction Kinetics Simulator",
+  "description": "An application that uses Gemini to generate simulated chemical kinetics data for polymeric reactions, grounded with Google Search for more fact-based results.",
+  "requestFramePermissions": []
+}
