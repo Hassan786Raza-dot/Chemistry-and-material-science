@@ -6,12 +6,14 @@
   "scripts": {
     "dev": "vite",
     "build": "vite build",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "typecheck": "tsc --noEmit",
+    "test": "node --experimental-strip-types tests/validation.test.ts",
+    "demo": "node --experimental-strip-types scripts/run-demo.ts"
   },
   "dependencies": {
     "react": "^19.1.1",
     "react-dom": "^19.1.1",
-    "@google/genai": "^1.21.0",
     "react-plotly.js": "^2.6.0",
     "plotly.js-dist-min": "^2.34.0",
     "plotly.js": "^3.1.1"

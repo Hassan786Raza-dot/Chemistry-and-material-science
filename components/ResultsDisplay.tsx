@@ -1,183 +1,23 @@
-
 import React from 'react';
-import type { GeneratedData, KineticPoint } from '../types';
-import { LoaderIcon } from './icons/LoaderIcon';
+import type { GeneratedData } from '../types';
 import KineticsChart from './KineticsChart';
-import { BeakerIcon } from './icons/BeakerIcon';
 import DataTable from './DataTable';
-import { FileTextIcon } from './icons/FileTextIcon';
 
-interface ResultsDisplayProps {
-  data: GeneratedData | null;
-  isLoading: boolean;
-  error: string | null;
+function downloadCsv(data: GeneratedData) {
+  const rows = [['time_min', ...data.kineticData[0] ? Object.keys(data.kineticData[0].conversion).map((key) => `${key}_percent`) : [], 'Mn_g_mol', 'Mw_g_mol', 'dispersity']];
+  data.kineticData.forEach((point) => rows.push([String(point.time), ...Object.values(point.conversion).map((value) => value.toFixed(6)), point.molecularWeightMn.toFixed(6), point.molecularWeightMw.toFixed(6), point.dispersity.toFixed(6)]));
+  const blob = new Blob([rows.map((row) => row.join(',')).join('\n')], { type: 'text/csv' }); const url = URL.createObjectURL(blob); const link = document.createElement('a'); link.href = url; link.download = 'polymer-kinetics-screening.csv'; link.click(); URL.revokeObjectURL(url);
 }
 
-const ExportButton: React.FC<{ onClick: () => void; children: React.ReactNode; ariaLabel: string }> = ({ onClick, children, ariaLabel }) => (
-    <button
-        onClick={onClick}
-        aria-label={ariaLabel}
-        className="flex items-center gap-1.5 bg-slate-700 hover:bg-slate-600 text-slate-300 font-semibold py-1 px-3 rounded-md text-xs transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-slate-800 focus:ring-cyan-500"
-    >
-        {children}
-    </button>
-);
-
-const ResultsDisplay: React.FC<ResultsDisplayProps> = ({ data, isLoading, error }) => {
-
-  const handleExportCSV = () => {
-    if (!data?.kineticData || data.kineticData.length === 0) return;
-    
-    const kineticData = data.kineticData;
-    const monomerKeys = Object.keys(kineticData[0].conversion ?? {}).filter(k => k !== 'overall');
-    
-    const headers = [
-      "Time (min)",
-      ...monomerKeys.map(name => `${name} Conv. (%)`),
-      "Overall Conv. (%)",
-      "Mn (g/mol)",
-      "Mw (g/mol)",
-      "Dispersity (Đ)"
-    ];
-    const csvRows = [headers.join(',')];
-
-    for (const point of kineticData) {
-        const mn = point.molecularWeightMn;
-        const mw = point.molecularWeightMw;
-        const dispersity = mn != null && mn > 0 && mw != null ? (mw / mn) : 1;
-        const values = [
-            point.time?.toFixed(0) ?? '',
-            ...monomerKeys.map(key => point.conversion?.[key]?.toFixed(2) ?? ''),
-            point.conversion?.overall?.toFixed(2) ?? '',
-            mn?.toLocaleString('en-US', {useGrouping: false}) ?? '',
-            mw?.toLocaleString('en-US', {useGrouping: false}) ?? '',
-            dispersity.toFixed(2)
-        ];
-        csvRows.push(values.join(','));
-    }
-    
-    const csvString = csvRows.join('\n');
-    const blob = new Blob([csvString], { type: 'text/csv;charset=utf-8;' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = 'polymer-kinetics-data.csv';
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
-  };
-
-  const renderContent = () => {
-    if (isLoading) {
-      return (
-        <div className="flex flex-col items-center justify-center h-full text-center">
-          <LoaderIcon className="w-12 h-12 animate-spin text-cyan-400 mb-4" />
-          <p className="text-xl font-medium text-slate-300">Generating Simulation...</p>
-          <p className="text-slate-400">This may take a moment. The model is processing your request.</p>
-        </div>
-      );
-    }
-
-    if (error) {
-      return (
-        <div className="flex flex-col items-center justify-center h-full text-center bg-red-900/20 border border-red-500/50 p-6 rounded-lg">
-          <svg xmlns="http://www.w3.org/2000/svg" className="h-12 w-12 text-red-400 mb-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-          </svg>
-          <h3 className="text-xl font-semibold text-red-300">An Error Occurred</h3>
-          <p className="text-red-400 max-w-md">{error}</p>
-        </div>
-      );
-    }
-
-    if (data) {
-      const showRatios = data.inputs.monomers.length === 2 && data.inputs.reactivityRatios;
-      const showCTA = data.inputs.chainTransferAgent && data.inputs.ctaConcentration;
-      const showSolvent = data.inputs.solvent && data.inputs.solventVolume;
-
-      return (
-        <div className="space-y-8">
-          <div>
-            <h3 className="text-2xl font-bold text-white mb-2">Kinetic Summary</h3>
-            <div className="space-y-2 mb-4">
-              {showRatios && (
-                  <div className="text-xs text-slate-400 p-3 bg-slate-800/50 rounded-md border border-slate-700 flex items-center gap-4 flex-wrap">
-                      <strong>Input Ratios:</strong>
-                      <span>r1 ({data.inputs.monomers[0].name}): <strong>{data.inputs.reactivityRatios?.r1}</strong></span>
-                      <span>r2 ({data.inputs.monomers[1].name}): <strong>{data.inputs.reactivityRatios?.r2}</strong></span>
-                  </div>
-              )}
-              {showCTA && (
-                  <div className="text-xs text-slate-400 p-3 bg-slate-800/50 rounded-md border border-slate-700 flex items-center gap-4 flex-wrap">
-                      <strong>Input CTA:</strong>
-                      <span>Agent: <strong>{data.inputs.chainTransferAgent}</strong></span>
-                      <span>Concentration: <strong>{data.inputs.ctaConcentration} mol/L</strong></span>
-                  </div>
-              )}
-               {showSolvent && (
-                  <div className="text-xs text-slate-400 p-3 bg-slate-800/50 rounded-md border border-slate-700 flex items-center gap-4 flex-wrap">
-                      <strong>Solvent System:</strong>
-                      <span>Solvent: <strong>{data.inputs.solvent}</strong></span>
-                      <span>Volume: <strong>{data.inputs.solventVolume} mL</strong></span>
-                  </div>
-              )}
-            </div>
-            <p className="text-slate-300 leading-relaxed bg-slate-800/50 p-4 rounded-md border border-slate-700">{data.summary}</p>
-          </div>
-          <div>
-            <div className="flex justify-between items-center mb-3">
-                <h3 className="text-2xl font-bold text-white">Kinetics Profile</h3>
-            </div>
-            <div className="bg-slate-800/50 p-4 rounded-md border border-slate-700 h-96">
-                <KineticsChart data={data.kineticData} />
-            </div>
-          </div>
-           <div>
-            <div className="flex justify-between items-center mb-3">
-                <h3 className="text-2xl font-bold text-white">Simulation Data Table</h3>
-                <ExportButton onClick={handleExportCSV} ariaLabel="Export table as CSV">
-                    <FileTextIcon className="w-4 h-4" /> CSV
-                </ExportButton>
-            </div>
-            <DataTable data={data.kineticData} />
-          </div>
-          {data.sources && data.sources.length > 0 && (
-             <div>
-                <h3 className="text-2xl font-bold text-white mb-3">Data Sources (from Google Search)</h3>
-                <div className="bg-slate-800/50 p-4 rounded-md border border-slate-700">
-                    <ul className="space-y-2">
-                        {data.sources.map((source, index) => (
-                            <li key={index} className="truncate">
-                                <a href={source.uri} target="_blank" rel="noopener noreferrer" className="text-cyan-400 hover:text-cyan-300 hover:underline transition-colors text-sm">
-                                    {source.title || source.uri}
-                                </a>
-                            </li>
-                        ))}
-                    </ul>
-                </div>
-             </div>
-          )}
-        </div>
-      );
-    }
-
-    return (
-      <div className="flex flex-col items-center justify-center h-full text-center text-slate-400">
-        <BeakerIcon className="w-16 h-16 text-slate-600 mb-4" />
-        <h3 className="text-xl font-semibold text-slate-300">Awaiting Simulation</h3>
-        <p>Your generated kinetic data will appear here.</p>
-      </div>
-    );
-  };
-
-  return (
-    <div className="bg-slate-800 p-6 rounded-lg shadow-lg min-h-[600px] border border-slate-700 flex justify-center items-center">
-       <div className="w-full h-full">
-         {renderContent()}
-       </div>
-    </div>
-  );
-};
-
-export default ResultsDisplay;
+export default function ResultsDisplay({ data, isLoading, error }: { data: GeneratedData | null; isLoading: boolean; error: string | null }) {
+  if (isLoading) return <div className="flex min-h-[620px] items-center justify-center rounded-2xl border border-slate-800 bg-slate-900/70"><div className="text-center"><div className="mx-auto mb-4 h-10 w-10 animate-spin rounded-full border-4 border-slate-700 border-t-cyan-400" /><h3 className="text-xl font-bold text-white">Running transparent model</h3><p className="mt-2 text-sm text-slate-400">Fetching optional chemical and literature metadata with safe timeouts.</p></div></div>;
+  if (error) return <div className="flex min-h-[620px] items-center justify-center rounded-2xl border border-rose-500/30 bg-rose-500/5 p-8 text-center"><div><h3 className="text-xl font-bold text-rose-300">Could not run the workflow</h3><p className="mt-2 text-sm text-rose-200">{error}</p></div></div>;
+  if (!data) return <div className="flex min-h-[620px] items-center justify-center rounded-2xl border border-dashed border-slate-700 bg-slate-900/50 p-8 text-center"><div><div className="mx-auto mb-4 text-5xl">∿</div><h3 className="text-xl font-bold text-slate-200">Your evidence-aware workspace</h3><p className="mx-auto mt-2 max-w-md text-sm text-slate-400">Run the demo or enter conditions to generate a transparent screening curve, inspect assumptions, and optionally enrich names from public sources.</p></div></div>;
+  return <div className="space-y-5 rounded-2xl border border-slate-800 bg-slate-900/70 p-5 shadow-xl"><div className="flex flex-wrap items-start justify-between gap-3"><div><div className="mb-2 inline-flex rounded-full border border-amber-400/30 bg-amber-400/10 px-3 py-1 text-xs font-bold text-amber-200">EXPLORATORY SCREENING ESTIMATE</div><h2 className="text-2xl font-bold text-white">Kinetic profile</h2><p className="mt-1 max-w-2xl text-sm leading-relaxed text-slate-400">{data.summary}</p></div><button type="button" onClick={() => downloadCsv(data)} className="rounded-lg border border-slate-700 px-3 py-2 text-sm font-semibold text-slate-200 hover:border-cyan-400 hover:text-cyan-300">Export CSV</button></div>
+    <div className="grid gap-3 sm:grid-cols-3"><div className="rounded-xl bg-slate-950/60 p-3"><span className="text-xs text-slate-500">Model</span><strong className="mt-1 block text-sm text-white">{data.diagnostics.modelName}</strong></div><div className="rounded-xl bg-slate-950/60 p-3"><span className="text-xs text-slate-500">Final conversion</span><strong className="mt-1 block text-sm text-cyan-300">{data.kineticData.at(-1)?.conversion.overall.toFixed(1)}%</strong></div><div className="rounded-xl bg-slate-950/60 p-3"><span className="text-xs text-slate-500">Created</span><strong className="mt-1 block text-sm text-white">{new Date(data.createdAt).toLocaleTimeString()}</strong></div></div>
+    <div className="h-[430px] rounded-xl border border-slate-800 bg-slate-950/40 p-2"><KineticsChart data={data.kineticData} /></div><DataTable data={data.kineticData} />
+    <details className="rounded-xl border border-slate-800 p-4"><summary className="cursor-pointer font-semibold text-slate-200">Inspect assumptions and warnings</summary><div className="mt-3 space-y-3 text-sm text-slate-400"><ul className="list-disc space-y-1 pl-5">{data.diagnostics.assumptions.map((item) => <li key={item}>{item}</li>)}</ul><ul className="list-disc space-y-1 pl-5 text-amber-200">{data.diagnostics.warnings.map((item) => <li key={item}>{item}</li>)}</ul></div></details>
+    {data.chemicalRecords.length > 0 && <section><h3 className="mb-2 font-bold text-white">Chemical metadata</h3><div className="grid gap-3 sm:grid-cols-2">{data.chemicalRecords.map((record) => <div key={record.query} className="rounded-xl border border-slate-800 p-3 text-sm"><strong className="text-cyan-300">{record.query}</strong>{record.warning ? <p className="mt-1 text-amber-200">{record.warning}</p> : <p className="mt-1 text-slate-400">{record.molecularFormula || 'Formula unavailable'} · {record.molecularWeight ? `${record.molecularWeight.toFixed(3)} g/mol` : 'MW unavailable'}</p>}<a className="mt-2 inline-block text-xs text-cyan-400 hover:underline" href={record.source.uri} target="_blank" rel="noreferrer">View source</a></div>)}</div></section>}
+    {data.sources.length > 0 && <section><h3 className="mb-2 font-bold text-white">Provenance</h3><ul className="space-y-1 text-xs text-slate-400">{data.sources.map((source) => <li key={source.uri + source.title}><a href={source.uri} target="_blank" rel="noreferrer" className="text-cyan-400 hover:underline">{source.title}</a> · {source.status} · retrieved {new Date(source.retrievedAt).toLocaleString()}</li>)}</ul></section>}
+  </div>;
+}
