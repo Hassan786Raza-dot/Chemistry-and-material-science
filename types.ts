@@ -58,9 +58,33 @@ export interface GeneratedData {
   chemicalRecords: ChemicalRecord[];
   diagnostics: ModelDiagnostics;
   createdAt: string;
+  recordVersion: string;
+  inputHash: string;
 }
 
 export interface ValidationResult { valid: boolean; errors: string[]; warnings: string[]; }
+
+export type EvidenceTier = 'exploratory-screening' | 'measured-fit' | 'externally-validated';
+
+export interface MeasuredPoint { time: number; conversion: number; replicate?: string; uncertainty?: number; }
+
+export interface FitResult { diagnostics: FitDiagnostics; fitted: Array<{ time: number; observed: number; fitted: number; residual: number; split: 'train' | 'validation' }>; }
+
+export interface FitDiagnostics {
+  evidenceTier: EvidenceTier;
+  modelName: string;
+  nObservations: number;
+  nReplicates: number;
+  rmse: number;
+  rSquared: number;
+  parameterEstimate: number;
+  parameterStdError?: number;
+  confidenceInterval95?: [number, number];
+  trainCount: number;
+  validationCount: number;
+  residuals: Array<{ time: number; observed: number; fitted: number; residual: number }>;
+  warnings: string[];
+}
 
 export interface LiteratureRecord {
   title: string;

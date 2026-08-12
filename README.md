@@ -14,13 +14,13 @@ npm run demo
 npm run dev
 ```
 
-Open the local URL printed by Vite and select **Run demo**. The demo runs without an API key. The browser attempts optional PubChem and Crossref lookups using short timeouts; if the network is unavailable, the local screening model still remains usable and the UI reports the missing live metadata rather than inventing replacements.
+Open the local URL printed by Vite and select **Run demo**. The demo runs without an API key. The browser attempts optional PubChem and Crossref lookups using short timeouts; if the network is unavailable, the local screening model still remains usable and the UI reports the missing live metadata rather than inventing replacements. To move beyond screening, use the **Fit measured conversion data** evidence gate with a CSV containing at least six observations.
 
 ## What the model does
 
 For the current free-radical screening mode, the app generates a monotonic conversion curve using a temperature- and initiator-scaled pseudo-first-order term. Copolymer conversion is apportioned using the supplied reactivity-ratio values as a transparent heuristic. Mn, Mw, and dispersity are bounded proxies derived from conversion and a simplified chain-length relation. Every assumption is rendered in the results panel and stored in the exported record.
 
-This is useful for interface validation, scenario comparison, and planning what measurements should be collected. It is not a substitute for a mechanistic kinetic model, quantum chemistry, molecular simulation, calorimetry, NMR, SEC/GPC, or a statistically validated fit.
+This is useful for interface validation, scenario comparison, and planning what measurements should be collected. It is not a substitute for a mechanistic kinetic model, quantum chemistry, molecular simulation, calorimetry, NMR, SEC/GPC, or independent validation. The measured-data gate fits a one-parameter conversion model and reports RMSE, R², residuals, a temporal holdout, and an approximate 95% interval; it still cannot establish external validity or reaction mechanism.
 
 ## Live resources and provenance
 
@@ -43,7 +43,9 @@ Both integrations use request timeouts and graceful failure. No API key is store
 | `services/validation.ts` | Input ranges and scope warnings |
 | `services/pubchemService.ts` | Optional chemical metadata lookup |
 | `services/literatureService.ts` | Optional Crossref metadata search |
-| `tests/validation.test.ts` | Regression tests and model invariants |
+| `services/measuredFit.ts` | CSV parsing and auditable measured-data fit |
+| `components/MeasuredDataPanel.tsx` | Evidence gate for measured data and diagnostics |
+| `tests/validation.test.ts` | Regression tests, model invariants, and fit checks |
 | `scripts/run-demo.ts` | End-to-end local smoke test |
 
 ## Limitations and evidence requirements
@@ -56,4 +58,4 @@ Do not infer toxicity, environmental fate, regulatory compliance, synthesis safe
 
 When using the software, cite the repository commit and state that the local model is an exploratory deterministic screening model. Cite the original papers or databases used to establish any experimental parameters. Do not cite the app as evidence that a proposed chemistry works unless the output has been independently validated and the validation protocol is reported.
 
-See [`docs/USER_GUIDE.md`](docs/USER_GUIDE.md), [`ROADMAP.md`](ROADMAP.md), and [`OPEN_ISSUES.md`](OPEN_ISSUES.md) for operational guidance and future work.
+See [`docs/USER_GUIDE.md`](docs/USER_GUIDE.md), [`LIMITATION_REGISTER.md`](LIMITATION_REGISTER.md), [`ROADMAP.md`](ROADMAP.md), and [`OPEN_ISSUES.md`](OPEN_ISSUES.md) for operational guidance, residual-risk controls, and future work.

@@ -1,6 +1,7 @@
 import type { FormData, GeneratedData, KineticPoint, ModelDiagnostics, SourceRecord } from '../types';
 
 const now = () => new Date().toISOString();
+const stableHash = (value: string) => { let hash = 2166136261; for (let index = 0; index < value.length; index += 1) { hash ^= value.charCodeAt(index); hash = Math.imul(hash, 16777619); } return (hash >>> 0).toString(16).padStart(8, '0'); };
 
 function pseudoRateConstant(data: FormData): number {
   const temperatureK = Number(data.temperature) + 273.15;
@@ -40,6 +41,6 @@ export function simulateFreeRadicalScreening(data: FormData): GeneratedData {
   };
   return {
     summary: `A deterministic screening curve was generated for ${data.reactionType}. Conversion rises monotonically under a pseudo-first-order assumption; molecular weight and dispersity are displayed as bounded proxies. This output is an exploratory model estimate and is not a validated prediction for the supplied chemistry.`,
-    kineticData: points, sources: [localSource], inputs: data, chemicalRecords: [], diagnostics, createdAt: retrievedAt,
+    kineticData: points, sources: [localSource], inputs: data, chemicalRecords: [], diagnostics, createdAt: retrievedAt, recordVersion: '1.1.0', inputHash: stableHash(JSON.stringify(data)),
   };
 }

@@ -1,0 +1,25 @@
+# Limitation Register and Mitigation Record
+
+The acceptance criterion for this release is not the impossible claim that all uncertainty has vanished. It is that every known limitation has an owner, a mitigation, a visible boundary, and a concrete next step. The application therefore uses evidence tiers and refuses to label screening output as validated evidence.
+
+| Domain | Limitation | Implemented mitigation | Residual boundary and next step |
+|---|---|---|---|
+| Scientific | The local curve is not a complete reaction mechanism. | The model is bounded, deterministic, named, and displays assumptions and warnings. Unsupported reaction types are visibly flagged. | It cannot establish mechanism validity. Add expert-reviewed mechanistic models and benchmark datasets before claiming mechanism-specific predictions. |
+| Scientific | Oxygen inhibition, diffusion limitation, heat transfer, solvent quality, termination, and side reactions are omitted. | These omissions are rendered in diagnostics and documentation. | They require chemistry-specific parameters and experiments; no safe generic substitute exists. |
+| Scientific | Mn, Mw, and dispersity are proxies rather than polymer characterization results. | The UI labels them as proxies and excludes them from validated-evidence status. | Add SEC/GPC or equivalent data and a calibrated molecular-weight model. |
+| Scientific | Name-based chemical lookup can be ambiguous. | PubChem responses are linked, timestamped, and presented as metadata rather than identity proof. | Add structure selection, salt/stereo handling, and repeat-unit identity checks. |
+| Scientific | Safety, toxicity, fate, and regulatory conclusions are unsupported. | The UI and documentation explicitly prohibit those inferences. | Require separate authoritative, jurisdiction-specific modules and expert review. |
+| Methodological | No experimental calibration dataset is present in the repository. | The application now accepts measured CSV data and provides a separate measured-fit evidence tier. | A measured fit is not externally validated; require independent batches and pre-specified acceptance criteria. |
+| Methodological | No uncertainty or residual analysis existed for measured inputs. | The fit workflow reports RMSE, R², residuals, a train/validation split, and an approximate 95% interval for the fitted rate parameter. | The interval is model-dependent; add bootstrap or likelihood-based intervals and replicate-aware weighting for publication use. |
+| Methodological | Data leakage and selective exclusions are possible in user-provided data. | The parser rejects malformed rows, duplicate times, and too few observations; the fit uses a deterministic temporal holdout. | Users must preserve raw data, pre-register exclusions, and validate on independent experimental batches. |
+| Statistical | R² alone can conceal systematic residual patterns. | Residuals are shown row-by-row and large residuals are highlighted. | Add formal residual plots, autocorrelation checks, alternative models, and repeated cross-validation. |
+| Computational | External APIs can fail, change, or return ambiguous records. | Calls have timeouts, status labels, source URLs, timestamps, and non-fabricating fallback warnings. | Pin/cache responses for archival studies and record provider versions or response hashes. |
+| Computational | Plotly creates a large bundle. | The build remains reproducible and successful; the limitation is documented. | Replace with a smaller chart layer or true route-level code splitting in a future performance release. |
+| Computational | Browser-only CSV handling limits file size and auditability. | The current workflow is explicit, bounded, and exportable. | Add streaming parsing, file hashes, and durable project storage for large studies. |
+| Practical | The tool does not persist projects or share analysis state. | CSV and JSON diagnostic export preserve local artifacts. | Add versioned project files, schema migration, and authenticated storage only when a deployment target is chosen. |
+| Practical | Live literature metadata is not a systematic review. | Crossref results are labeled metadata discovery and linked for manual review. | Add a human-reviewed evidence table with search protocol, inclusion criteria, and full-text assessment. |
+| Practical | A polished UI could encourage over-trust. | Evidence banners, warnings, assumptions, evidence-gated measured fitting, and explicit prohibitions are placed in the primary flow. | Independent usability testing with researchers is still required; collect feedback before broader adoption. |
+
+## Release gate
+
+The application may be used for transparent screening and measured-data exploration. It must not be described as a validated predictive model until an external benchmark, independent validation set, uncertainty protocol, and expert-reviewed acceptance criteria are added. This boundary is enforced through language and evidence-tier labels rather than by hiding uncertainty.
